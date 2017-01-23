@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import telnetlib
 from random import choice
 from time import sleep
 from serial_port import SerialPort
@@ -27,6 +28,12 @@ def read_telemetry(serial_port):
         serial_port.readline()
 
 
+def read_fg_telemetry(telnet_client):
+    telnet_client.write(b'ls position\r\n')
+    position = telnet_client.read_until(b'/> ').decode('ascii')
+    print(position)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='NMEA sender and telemetry receiver via serial port',
@@ -44,6 +51,18 @@ if __name__ == '__main__':
         help='Send data over a serial port',
         default=None
     )
+    parser.add_argument(
+        '--telnet-host',
+        dest='telnet_host',
+        help='Telnet host',
+        default='127.0.0.1'
+    )
+    parser.add_argument(
+        '--telnet-port',
+        dest='telnet_port',
+        help='Telnet port',
+        default=5401
+    )
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -53,7 +72,10 @@ if __name__ == '__main__':
         print('No comms method specified')
         exit(-1)
 
+    telnet_client = telnetlib.Telnet(host=args.telnet_host, port=int(args.telnet_port))
+
     while True:
+        read_fg_telemetry(telnet_client)
         write_nmea(port, choice(NMEA_TEST_LINES), args.verbose)
         sleep(1)
 
