@@ -23,6 +23,15 @@ def write_nmea(serial_port, line, verbose):
     serial_port.write(line.encode('utf-8'))
 
 
+def generate_nmea_sentences(telemetry):
+    lat = telemetry['latitude-deg']
+    lon = telemetry['longitude-deg']
+    gpgga = '$GPGGA,192917.000,{},N,{},E,1,7,1.15,12.2,M,23.7,M,,*6F'.format(lat, lon)
+    print(gpgga)
+    gpgga = choice(NMEA_TEST_LINES)
+    return [gpgga]
+
+
 def read_telemetry(serial_port):
     if serial_port.any():
         serial_port.readline()
@@ -30,8 +39,15 @@ def read_telemetry(serial_port):
 
 def read_fg_telemetry(telnet_client):
     telnet_client.write(b'ls position\r\n')
-    position = telnet_client.read_until(b'/> ').decode('ascii')
+    received_data = telnet_client.read_until(b'/> ').decode('ascii')
+    print(received_data)
+    records = [rec.split('\t') for rec in received_data.split('\r\n')[:-1]]
+    print(records)
+    position = {rec[0][:-2]: rec[1] for rec in records if len(rec) == 3}
+
     print(position)
+
+    return position
 
 
 if __name__ == '__main__':
@@ -75,7 +91,11 @@ if __name__ == '__main__':
     telnet_client = telnetlib.Telnet(host=args.telnet_host, port=int(args.telnet_port))
 
     while True:
-        read_fg_telemetry(telnet_client)
-        write_nmea(port, choice(NMEA_TEST_LINES), args.verbose)
+        telemetry = read_fg_telemetry(telnet_client)
+        nmea_sentences = generate_nmea_sentences(telemetry)
+
+        for nmea_sentence in nmea_sentences:
+            write_nmea(port, nmea_sentence, args.verbose)
+
         sleep(1)
 
