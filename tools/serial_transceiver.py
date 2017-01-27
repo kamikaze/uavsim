@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
+import re
 import sys
 import telnetlib
+from decimal import Decimal
 from random import choice
 from time import sleep
 from serial_port import SerialPort
@@ -16,6 +18,9 @@ NMEA_TEST_LINES = [
     '$GPGGA,191301.000,5654.8017,N,02410.9511,E,1,8,1.13,26.5,M,23.7,M,,*6C'
 ]
 
+FG_PROP_REGEXP = re.compile('([^=]*)\s+=\s*\'([^\']*)\'\s*\(([^\r]*)\)')
+
+
 def write_nmea(serial_port, line, verbose):
     if verbose:
         print('Writing NMEA sentence: {}'.format(line))
@@ -26,9 +31,8 @@ def write_nmea(serial_port, line, verbose):
 def generate_nmea_sentences(telemetry):
     lat = telemetry['latitude-deg']
     lon = telemetry['longitude-deg']
-    gpgga = '$GPGGA,192917.000,{},N,{},E,1,7,1.15,12.2,M,23.7,M,,*6F'.format(lat, lon)
-    print(gpgga)
-    gpgga = choice(NMEA_TEST_LINES)
+    gpgga = '$GPGGA,192917.000,{:09.4f},N,{:010.4f},E,1,7,1.15,12.2,M,23.7,M,,*6F'.format(lat*100, lon*100)
+
     return [gpgga]
 
 
@@ -40,14 +44,27 @@ def read_telemetry(serial_port):
 def read_fg_telemetry(telnet_client):
     telnet_client.write(b'ls position\r\n')
     received_data = telnet_client.read_until(b'/> ').decode('ascii')
-    print(received_data)
-    records = [rec.split('\t') for rec in received_data.split('\r\n')[:-1]]
-    print(records)
-    position = {rec[0][:-2]: rec[1] for rec in records if len(rec) == 3}
+    telemetry = {}
 
-    print(position)
+    for row in received_data.split('\r\n')[:-1]:
+        match = FG_PROP_REGEXP.match(row)
 
-    return position
+        if not match:
+            continue
+
+        key, value, t = match.groups()
+
+        if not value:
+            continue
+
+        if t == 'double':
+            value = Decimal(value)
+        elif t == 'bool':
+            value = value == 'true'
+
+        telemetry[key] = value
+
+    return telemetry
 
 
 if __name__ == '__main__':
