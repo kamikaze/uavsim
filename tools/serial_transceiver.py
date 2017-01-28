@@ -108,11 +108,14 @@ if __name__ == '__main__':
     telnet_client = telnetlib.Telnet(host=args.telnet_host, port=int(args.telnet_port))
 
     while True:
-        telemetry = read_fg_telemetry(telnet_client)
-        nmea_sentences = generate_nmea_sentences(telemetry)
+        try:
+            telemetry = read_fg_telemetry(telnet_client)
+            nmea_sentences = generate_nmea_sentences(telemetry)
 
-        for nmea_sentence in nmea_sentences:
-            write_nmea(port, nmea_sentence, args.verbose)
+            for nmea_sentence in nmea_sentences:
+                write_nmea(port, nmea_sentence, args.verbose)
+        except (EOFError, ConnectionResetError):
+            pass
 
         sleep(1)
 
