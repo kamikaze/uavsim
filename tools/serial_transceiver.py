@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
             for nmea_sentence in nmea_sentences:
                 write_nmea(port, nmea_sentence, args.verbose)
-        except (EOFError, ConnectionResetError):
+        except (EOFError, ConnectionResetError, BrokenPipeError):
             pass
 
         sleep(1)
