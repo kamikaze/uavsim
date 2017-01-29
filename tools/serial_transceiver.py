@@ -6,17 +6,9 @@ import sys
 import telnetlib
 from decimal import Decimal
 from random import choice
-from time import sleep
+from time import sleep, gmtime, strftime
 from serial_port import SerialPort
 
-
-NMEA_TEST_LINES = [
-    '$GPGGA,192917.000,5654.7984,N,02410.9481,E,1,7,1.15,12.2,M,23.7,M,,*6F',
-    '$GPGGA,192322.000,5654.7977,N,02410.9479,E,1,8,1.02,11.9,M,23.7,M,,*69',
-    '$GPGGA,191945.000,5654.7968,N,02410.9479,E,1,9,0.91,11.1,M,23.7,M,,*6D',
-    '$GPGGA,191636.000,5654.7967,N,02410.9484,E,1,9,0.92,10.8,M,23.7,M,,*60',
-    '$GPGGA,191301.000,5654.8017,N,02410.9511,E,1,8,1.13,26.5,M,23.7,M,,*6C'
-]
 
 FG_PROP_REGEXP = re.compile('([^=]*)\s+=\s*\'([^\']*)\'\s*\(([^\r]*)\)')
 
@@ -29,11 +21,23 @@ def write_nmea(serial_port, line, verbose):
 
 
 def generate_nmea_sentences(telemetry):
+    dt = gmtime()
+    t = strftime('%H%M%S', dt)
+    d = strftime('%d%m%y', dt)
     lat = telemetry['latitude-deg']
     lon = telemetry['longitude-deg']
-    gpgga = '$GPGGA,192917.000,{:09.4f},N,{:010.4f},E,1,7,1.15,12.2,M,23.7,M,,*6F'.format(lat*100, lon*100)
+    lat_half = 'N' if lat > 0 else 'S'
+    lon_half = 'E' if lon > 0 else 'W'
+    lat = lat*100 if lat > 0 else lat * -100
+    lon = lon*100 if lon > 0 else lon * -100
 
-    return [gpgga]
+    gpgga = '$GPGGA,{}.000,{:09.4f},{},{:010.4f},{},1,7,1.15,12.2,M,23.7,M,,*6F'.format(t, lat, lat_half, lon, lon_half)
+    gprmc = '$GPRMC,{}.000,A,{:09.4f},{},{:010.4f},{},0.03,267.70,{},,,A*6D'.format(t, lat, lat_half, lon, lon_half, d)
+
+    print(gpgga)
+    print(gprmc)
+
+    return [gpgga, gprmc]
 
 
 def read_telemetry(serial_port):
@@ -51,6 +55,8 @@ def read_fg_telemetry(telnet_client):
 
         if not match:
             continue
+
+        # print(row)
 
         key, value, t = match.groups()
 
@@ -114,8 +120,7 @@ if __name__ == '__main__':
 
             for nmea_sentence in nmea_sentences:
                 write_nmea(port, nmea_sentence, args.verbose)
+                sleep(1)
         except (EOFError, ConnectionResetError, BrokenPipeError):
-            pass
-
-        sleep(1)
+            sleep(5)
 
