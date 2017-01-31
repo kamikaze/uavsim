@@ -24,6 +24,7 @@ def generate_nmea_sentences(telemetry):
     dt = gmtime()
     t = strftime('%H%M%S', dt)
     d = strftime('%d%m%y', dt)
+    alt = Decimal(telemetry['altitude-ft']) * Decimal('0.3048')
     lat = telemetry['latitude-deg']
     lon = telemetry['longitude-deg']
     lat_half = 'N' if lat > 0 else 'S'
@@ -31,13 +32,15 @@ def generate_nmea_sentences(telemetry):
     lat = lat*100 if lat > 0 else lat * -100
     lon = lon*100 if lon > 0 else lon * -100
 
-    gpgga = '$GPGGA,{}.000,{:09.4f},{},{:010.4f},{},1,7,1.15,12.2,M,23.7,M,,*6F'.format(t, lat, lat_half, lon, lon_half)
+    gpgga = '$GPGGA,{}.000,{:09.4f},{},{:010.4f},{},1,7,1.15,{},M,23.7,M,,*6F'.format(t, lat, lat_half, lon, lon_half, alt)
     gprmc = '$GPRMC,{}.000,A,{:09.4f},{},{:010.4f},{},0.03,267.70,{},,,A*6D'.format(t, lat, lat_half, lon, lon_half, d)
+    exinj = '$EXINJ,{},NA'.format(telemetry['heading-deg'])
 
     print(gpgga)
     print(gprmc)
+    print(exinj)
 
-    return [gpgga, gprmc]
+    return [gpgga, gprmc, exinj]
 
 
 def read_telemetry(serial_port):
@@ -45,8 +48,8 @@ def read_telemetry(serial_port):
         serial_port.readline()
 
 
-def read_fg_telemetry(telnet_client):
-    telnet_client.write(b'ls position\r\n')
+def read_fg_data(telnet_client, path):
+    telnet_client.write('ls {}\r\n'.format(path).encode('ascii'))
     received_data = telnet_client.read_until(b'/> ').decode('ascii')
     telemetry = {}
 
@@ -69,6 +72,13 @@ def read_fg_telemetry(telnet_client):
             value = value == 'true'
 
         telemetry[key] = value
+
+    return telemetry
+
+
+def read_fg_telemetry(telnet_client):
+    telemetry = read_fg_data(telnet_client, 'position')
+    telemetry.update(read_fg_data(telnet_client, 'orientation'))
 
     return telemetry
 
