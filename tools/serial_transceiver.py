@@ -17,7 +17,7 @@ def write_nmea(serial_port, line, verbose):
     if verbose:
         print('Writing NMEA sentence: {}'.format(line))
 
-    serial_port.write(line.encode('utf-8'))
+    serial_port.write('{}\n'.format(line).encode('utf-8'))
 
 
 def generate_nmea_sentences(telemetry):
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
             for nmea_sentence in nmea_sentences:
                 write_nmea(port, nmea_sentence, args.verbose)
-                sleep(1)
+            sleep(1)
         except (EOFError, ConnectionResetError, BrokenPipeError):
             sleep(5)
 
