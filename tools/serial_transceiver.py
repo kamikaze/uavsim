@@ -32,13 +32,15 @@ def generate_nmea_sentences(telemetry):
     lat = lat*100 if lat > 0 else lat * -100
     lon = lon*100 if lon > 0 else lon * -100
 
+    heading = telemetry['heading-deg']
+    roll_x = telemetry['roll-deg']
+    pitch_y = telemetry['pitch-deg']
+    # yaw-deg is '' for some reason
+    yaw_z = heading
+
     gpgga = '$GPGGA,{}.000,{:09.4f},{},{:010.4f},{},1,7,1.15,{},M,23.7,M,,*6F'.format(t, lat, lat_half, lon, lon_half, alt)
     gprmc = '$GPRMC,{}.000,A,{:09.4f},{},{:010.4f},{},0.03,267.70,{},,,A*6D'.format(t, lat, lat_half, lon, lon_half, d)
-    exinj = '$EXINJ,{},NA'.format(telemetry['heading-deg'])
-
-    print(gpgga)
-    print(gprmc)
-    print(exinj)
+    exinj = '$EXINJ,{},{},{},{},NA'.format(heading, roll_x, pitch_y, yaw_z)
 
     return [gpgga, gprmc, exinj]
 
@@ -59,8 +61,6 @@ def read_fg_data(telnet_client, path):
         if not match:
             continue
 
-        # print(row)
-
         key, value, t = match.groups()
 
         if not value:
@@ -78,7 +78,7 @@ def read_fg_data(telnet_client, path):
 
 def read_fg_telemetry(telnet_client):
     telemetry = read_fg_data(telnet_client, 'position')
-    telemetry.update(read_fg_data(telnet_client, 'orientation'))
+    telemetry.update(read_fg_data(telnet_client, 'orientation/model'))
 
     return telemetry
 
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
             for nmea_sentence in nmea_sentences:
                 write_nmea(port, nmea_sentence, args.verbose)
-            sleep(1)
+            sleep(0.25)
         except (EOFError, ConnectionResetError, BrokenPipeError):
             sleep(5)
 
