@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import argparse
 import re
 import sys
@@ -171,7 +170,7 @@ if __name__ == '__main__':
                         send_fg_command(telnet_client, line)
 
                     sleep(0.5)
-                except (EOFError, ConnectionResetError, BrokenPipeError, SerialException):
+                except (EOFError, ConnectionResetError, BrokenPipeError, KeyError, SerialException):
                     sleep(5)
         except ConnectionRefusedError:
             print('Telnet connection to {}:{} failed, retrying after {}s'.format(args.telnet_host, args.telnet_port, TELNET_CONNECTION_RETRY_DELAY))

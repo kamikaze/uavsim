@@ -1,0 +1,73 @@
+{
+  "version": 2,
+  "workers": [
+    {
+      "type": "router",
+      "options": {
+        "title": "crossbar [qgpsemu]"
+      },
+      "realms": [
+        {
+          "name": "qgpsemu",
+          "roles": [
+            {
+              "name": "uav",
+              "permissions": [
+                {
+                  "uri": "",
+                  "match": "prefix",
+                  "allow": {
+                    "call": true,
+                    "register": true,
+                    "publish": true,
+                    "subscribe": true
+                  },
+                  "disclose": {
+                    "caller": false,
+                    "publisher": false
+                  },
+                  "cache": true
+                }
+              ]
+            },
+            {
+              "name": "anonymous",
+              "permissions": [
+                {
+                  "uri": "",
+                  "match": "prefix",
+                  "allow": {
+                    "call": true,
+                    "register": true,
+                    "publish": true,
+                    "subscribe": true
+                  },
+                  "disclose": {
+                    "caller": false,
+                    "publisher": false
+                  },
+                  "cache": true
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "transports": [
+        {
+          "type": "web",
+          "endpoint": {
+            "type": "tcp",
+            "interface": "127.0.0.1",
+            "port": 8091
+          },
+          "paths": {
+            "qgpsemu": {
+              "type": "websocket"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
