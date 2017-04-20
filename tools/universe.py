@@ -20,6 +20,25 @@ def start_fgfs():
     subprocess.run(cmd)
 
 
+def start_fg_adapter():
+    options = {
+        'telnet-host': '127.0.0.1',
+        'telnet-port': 5901
+    }
+    cmd = ['python', '{}/fg_adapter.py'.format(os.path.dirname(os.path.realpath(__file__)))]
+    cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
+
+    subprocess.run(cmd)
+
+
+def start_uav_adapter():
+    options = {'serial': '/dev/ttyACM0'}
+    cmd = ['python', '{}/uav_adapter.py'.format(os.path.dirname(os.path.realpath(__file__)))]
+    cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
+
+    subprocess.run(cmd)
+
+
 def start_serial_transceiver():
     options = {
         'serial': '/dev/ttyACM0',

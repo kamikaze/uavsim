@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 import argparse
+import logging
 import re
 import sys
 import telnetlib
 from decimal import Decimal
-from random import choice
 from time import sleep, gmtime, strftime
 from serial import Serial
 from serial.serialutil import SerialException
 
+
+logger = logging.getLogger(__name__)
 
 FG_PROP_REGEXP = re.compile('([^=]*)\s+=\s*\'([^\']*)\'\s*\(([^\r]*)\)')
 TELNET_CONNECTION_RETRY_DELAY = 5
@@ -29,22 +31,22 @@ def send_fg_command(telnet_client, line):
     cmd_id = int(cmd_id)
 
     last_cmd = LAST_FG_COMMANDS.get(cmd_id)
-    print(cmd_id, last_cmd)
+    logger.debug('{} {}'.format(cmd_id, last_cmd))
+
     if last_cmd == data:
         return
 
     cmd = FG_COMMANDS[cmd_id]
     cmd = 'set {}\r\n'.format(cmd.format(*data))
-    print(cmd)
+    logger.debug(cmd)
 
     telnet_client.write(cmd.encode('ascii'))
     LAST_FG_COMMANDS[cmd_id] = data
     telnet_client.read_until(b'/> ')
 
 
-def write_nmea(serial_port, line, verbose):
-    if verbose:
-        print('Writing NMEA sentence: {}'.format(line))
+def write_nmea(serial_port, line):
+    logger.debug('Writing NMEA sentence: {}'.format(line))
 
     serial_port.write('{}\n'.format(line).encode('utf-8'))
 
@@ -146,13 +148,13 @@ if __name__ == '__main__':
         try:
             if args.serial:
                 port = Serial(args.serial)
-                print('Connected to serial port {}'.format(args.serial))
+                logger.info('Connected to serial port {}'.format(args.serial))
             else:
-                print('No comms method specified')
+                logger.warning('No comms method specified')
                 exit(-1)
 
             telnet_client = telnetlib.Telnet(host=args.telnet_host, port=int(args.telnet_port))
-            print('Connected to FG')
+            logger.info('Connected to FG')
 
             while True:
                 try:
@@ -160,21 +162,20 @@ if __name__ == '__main__':
                     nmea_sentences = generate_nmea_sentences(telemetry)
 
                     for nmea_sentence in nmea_sentences:
-                        write_nmea(port, nmea_sentence, args.verbose)
-                        print(nmea_sentence)
+                        write_nmea(port, nmea_sentence)
+                        logger.debug(nmea_sentence)
 
                     line = port.readline().decode('utf-8').rstrip('\n') if port.in_waiting else None
 
                     if line:
-                        print(line)
+                        logger.debug(line)
                         send_fg_command(telnet_client, line)
 
                     sleep(0.5)
                 except (EOFError, ConnectionResetError, BrokenPipeError, KeyError, SerialException):
                     sleep(5)
         except ConnectionRefusedError:
-            print('Telnet connection to {}:{} failed, retrying after {}s'.format(args.telnet_host, args.telnet_port, TELNET_CONNECTION_RETRY_DELAY))
+            logger.warning('Telnet connection to {}:{} failed, retrying after {}s'.format(args.telnet_host, args.telnet_port, TELNET_CONNECTION_RETRY_DELAY))
             sleep(TELNET_CONNECTION_RETRY_DELAY)
         finally:
             port.close()
-
