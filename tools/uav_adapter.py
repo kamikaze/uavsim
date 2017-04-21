@@ -69,17 +69,34 @@ class UAVAdapterComponent(ApplicationSession):
     async def onJoin(self, details):
         await self.register(self, options=RegisterOptions(invoke='roundrobin'))
 
+        while True:
+            try:
+                self.serial_port = Serial(args.serial)
+                logger.info('Connected to serial port {}'.format(args.serial))
 
-def on_uav_message(telnet_client, line):
-    cmd_id, *data = line.split(',')
-    cmd_id = int(cmd_id)
+                while True:
+                    try:
+                        line = self.serial_port.readline().decode('utf-8').rstrip('\n') if self.serial_port.in_waiting else None
 
-    last_cmd = LAST_FG_COMMANDS.get(cmd_id)
-    print(cmd_id, last_cmd)
-    if last_cmd == data:
-        return
+                        if line:
+                            logger.debug(line)
 
-    # TODO: publish uav message into crossbar
+                            cmd_id, *data = line.split(',')
+                            cmd_id = int(cmd_id)
+                            last_cmd = LAST_FG_COMMANDS.get(cmd_id)
+
+                            logger.debug('{} {}'.format(cmd_id, last_cmd))
+
+                            if last_cmd == data:
+                                return
+
+                            self.publish('uav.cmd', cmd_id, data)
+
+                        sleep(0.5)
+                    except (EOFError, ConnectionResetError, BrokenPipeError, KeyError, SerialException):
+                        sleep(5)
+            finally:
+                self.serial_port.close()
 
 
 def join_to_router(component_class):
@@ -123,27 +140,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args(sys.argv[1:])
 
-    while True:
-        try:
-            if args.serial:
-                port = Serial(args.serial)
-                print('Connected to serial port {}'.format(args.serial))
-            else:
-                print('No comms method specified')
-                exit(-1)
-
-            while True:
-                try:
-                    line = port.readline().decode('utf-8').rstrip('\n') if port.in_waiting else None
-
-                    if line:
-                        print(line)
-                        send_fg_command(telnet_client, line)
-
-                    sleep(0.5)
-                except (EOFError, ConnectionResetError, BrokenPipeError, KeyError, SerialException):
-                    sleep(5)
-        finally:
-            port.close()
+    if not args.serial:
+        logger.error('No comms method specified')
+        exit(-1)
 
     join_to_router(UAVAdapterComponent)
