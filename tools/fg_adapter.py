@@ -6,11 +6,9 @@ import sys
 import telnetlib
 from decimal import Decimal
 from time import sleep, gmtime, strftime
-from serial import Serial
-from serial.serialutil import SerialException
-
 
 logger = logging.getLogger(__name__)
+
 
 FG_PROP_REGEXP = re.compile('([^=]*)\s+=\s*\'([^\']*)\'\s*\(([^\r]*)\)')
 TELNET_CONNECTION_RETRY_DELAY = 5
@@ -31,22 +29,23 @@ def send_fg_command(telnet_client, line):
     cmd_id = int(cmd_id)
 
     last_cmd = LAST_FG_COMMANDS.get(cmd_id)
-    logger.debug('{} {}'.format(cmd_id, last_cmd))
+    logger.info('{} {}'.format(cmd_id, last_cmd))
 
     if last_cmd == data:
         return
 
     cmd = FG_COMMANDS[cmd_id]
     cmd = 'set {}\r\n'.format(cmd.format(*data))
-    logger.debug(cmd)
+    logger.info(cmd)
 
     telnet_client.write(cmd.encode('ascii'))
     LAST_FG_COMMANDS[cmd_id] = data
     telnet_client.read_until(b'/> ')
 
 
-def write_nmea(serial_port, line):
-    logger.debug('Writing NMEA sentence: {}'.format(line))
+def write_nmea(serial_port, line, verbose):
+    if verbose:
+        logger.info('Writing NMEA sentence: {}'.format(line))
 
     serial_port.write('{}\n'.format(line).encode('utf-8'))
 
@@ -114,7 +113,7 @@ def read_fg_telemetry(telnet_client):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='NMEA sender and telemetry receiver via serial port',
+        description='NMEA sender and telemetry receiver',
     )
     parser.add_argument(
         '-v', '--verbose',
@@ -122,12 +121,6 @@ if __name__ == '__main__':
         action='store_true',
         help='Turn on verbose messages',
         default=False
-    )
-    parser.add_argument(
-        '--serial',
-        dest='serial',
-        help='Send data over a serial port',
-        default=None
     )
     parser.add_argument(
         '--telnet-host',
@@ -146,13 +139,6 @@ if __name__ == '__main__':
 
     while True:
         try:
-            if args.serial:
-                port = Serial(args.serial)
-                logger.info('Connected to serial port {}'.format(args.serial))
-            else:
-                logger.warning('No comms method specified')
-                exit(-1)
-
             telnet_client = telnetlib.Telnet(host=args.telnet_host, port=int(args.telnet_port))
             logger.info('Connected to FG')
 
@@ -162,20 +148,12 @@ if __name__ == '__main__':
                     nmea_sentences = generate_nmea_sentences(telemetry)
 
                     for nmea_sentence in nmea_sentences:
-                        write_nmea(port, nmea_sentence)
-                        logger.debug(nmea_sentence)
-
-                    if port.in_waiting:
-                        line = port.readline().decode('utf-8').rstrip('\n')
-
-                        logger.debug(line)
-                        send_fg_command(telnet_client, line)
+                        write_nmea(port, nmea_sentence, args.verbose)
+                        logger.info(nmea_sentence)
 
                     sleep(0.5)
-                except (EOFError, ConnectionResetError, BrokenPipeError, KeyError, SerialException):
+                except (EOFError, ConnectionResetError, BrokenPipeError, KeyError):
                     sleep(5)
         except ConnectionRefusedError:
-            logger.warning('Telnet connection to {}:{} failed, retrying after {}s'.format(args.telnet_host, args.telnet_port, TELNET_CONNECTION_RETRY_DELAY))
+            logger.info('Telnet connection to {}:{} failed, retrying after {}s'.format(args.telnet_host, args.telnet_port, TELNET_CONNECTION_RETRY_DELAY))
             sleep(TELNET_CONNECTION_RETRY_DELAY)
-        finally:
-            port.close()

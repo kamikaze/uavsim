@@ -16,7 +16,7 @@ from serial.serialutil import SerialException
 
 logger = logging.getLogger(__name__)
 
-CROSSBAR_ROUTE = ''
+CROSSBAR_ROUTE = 'ws://127.0.0.1:8091/qgpsemu'
 
 AP_CMD_ENGINE0_THROTTLE = 1
 AP_CMD_ENGINE1_THROTTLE = 2
@@ -76,9 +76,9 @@ class UAVAdapterComponent(ApplicationSession):
 
                 while True:
                     try:
-                        line = self.serial_port.readline().decode('utf-8').rstrip('\n') if self.serial_port.in_waiting else None
+                        if self.serial_port.in_waiting:
+                            line = self.serial_port.readline().decode('utf-8').rstrip('\n')
 
-                        if line:
                             logger.debug(line)
 
                             cmd_id, *data = line.split(',')
@@ -90,11 +90,15 @@ class UAVAdapterComponent(ApplicationSession):
                             if last_cmd == data:
                                 return
 
+                            print('uav.cmd', cmd_id, data)
                             self.publish('uav.cmd', cmd_id, data)
 
-                        sleep(0.5)
-                    except (EOFError, ConnectionResetError, BrokenPipeError, KeyError, SerialException):
-                        sleep(5)
+                        await asyncio.sleep(0.5)
+                    except (EOFError, ConnectionResetError, BrokenPipeError, KeyError, OSError, SerialException):
+                        await asyncio.sleep(5)
+                        break
+            except SerialException:
+                await asyncio.sleep(5)
             finally:
                 self.serial_port.close()
 
@@ -105,7 +109,7 @@ def join_to_router(component_class):
 
     runner = ApplicationRunner(
         CROSSBAR_ROUTE,
-        'UAVAdapter'
+        'qgpsemu'
     )
 
     rerun = True
@@ -115,7 +119,8 @@ def join_to_router(component_class):
 
         try:
             runner.run(component_class)
-        except gaierror:
+        # except gaierror:
+        except OSError:
             # TODO: log about [Errno -3] Temporary failure in name resolution
             rerun = True
 
