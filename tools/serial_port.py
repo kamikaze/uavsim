@@ -1,6 +1,7 @@
 import serial
 import select
 
+
 class SerialPort(object):
     """Implements a PySerial port."""
 

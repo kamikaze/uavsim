@@ -4,16 +4,13 @@ import asyncio
 import logging
 import sys
 
-from decimal import Decimal
-from time import sleep, gmtime, strftime
-
-from autobahn import wamp
 from autobahn.wamp.types import RegisterOptions
 from autobahn.asyncio.wamp import ApplicationSession, ApplicationRunner
 from serial import Serial
 from serial.serialutil import SerialException
 
 
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 CROSSBAR_ROUTE = 'ws://127.0.0.1:8091/qgpsemu'
@@ -29,87 +26,62 @@ FG_COMMANDS = {
 LAST_FG_COMMANDS = {}
 
 
-def generate_nmea_sentences(telemetry):
-    dt = gmtime()
-    t = strftime('%H%M%S', dt)
-    d = strftime('%d%m%y', dt)
-    alt = Decimal(telemetry['altitude-ft']) * Decimal('0.3048')
-    lat = telemetry['latitude-deg']
-    lon = telemetry['longitude-deg']
-    lat_half = 'N' if lat > 0 else 'S'
-    lon_half = 'E' if lon > 0 else 'W'
-    lat = lat*100 if lat > 0 else lat * -100
-    lon = lon*100 if lon > 0 else lon * -100
-
-    heading = telemetry['heading-deg']
-    roll_x = telemetry['roll-deg']
-    pitch_y = telemetry['pitch-deg']
-    # yaw-deg is '' for some reason
-    yaw_z = heading
-
-    speed_over_ground = telemetry['groundspeed-kt']
-
-    gpgga = '$GPGGA,{}.000,{:09.4f},{},{:010.4f},{},1,7,1.15,{},M,23.7,M,,*6F'.format(t, lat, lat_half, lon, lon_half, alt)
-    gprmc = '$GPRMC,{}.000,A,{:09.4f},{},{:010.4f},{},{:.2f},267.70,{},,,A*6D'.format(t, lat, lat_half, lon, lon_half, speed_over_ground, d)
-    exinj = '$EXINJ,{},{},{},{},NA'.format(heading, roll_x, pitch_y, yaw_z)
-
-    return [gpgga, gprmc, exinj]
-
-
 class UAVAdapterComponent(ApplicationSession):
     def __init__(self, config=None):
-        self.serial_port = Serial(args.serial)
         ApplicationSession.__init__(self, config)
+        self.serial_port = None
 
-    @wamp.register('uav.send_nmea_line')
-    async def send_nmea_line(self, line):
-        self.serial_port.write('{}\n'.format(line).encode('utf-8'))
-        return None
+    async def connect_serial_port(self, path):
+        while True:
+            try:
+                self.serial_port = Serial(path)
+                logger.debug('Connected to serial port {}'.format(args.serial))
+
+                break
+            except SerialException:
+                logger.warning('Error while opening serial port at {}'.format(args.serial))
+                await asyncio.sleep(5)
+
+    async def on_sim_nmea(self, nmea_sentence):
+        logger.debug(nmea_sentence)
+
+        try:
+            self.serial_port.write('{}\n'.format(nmea_sentence).encode('utf-8'))
+        except (AttributeError, SerialException):
+            await self.connect_serial_port(self.config.extra['options'].serial)
 
     async def onJoin(self, details):
         await self.register(self, options=RegisterOptions(invoke='roundrobin'))
 
-        while True:
-            try:
-                self.serial_port = Serial(args.serial)
-                logger.info('Connected to serial port {}'.format(args.serial))
+        await self.subscribe(self.on_sim_nmea, 'sim.nmea')
 
-                while True:
-                    try:
-                        if self.serial_port.in_waiting:
-                            line = self.serial_port.readline().decode('utf-8').rstrip('\n')
+        try:
+            await self.connect_serial_port(self.config.extra['options'].serial)
 
-                            logger.debug(line)
+            while True:
+                try:
+                    if self.serial_port.in_waiting:
+                        line = self.serial_port.readline().decode('utf-8').rstrip('\n')
+                        self.publish('uav.cmd', line)
 
-                            cmd_id, *data = line.split(',')
-                            cmd_id = int(cmd_id)
-                            last_cmd = LAST_FG_COMMANDS.get(cmd_id)
-
-                            logger.debug('{} {}'.format(cmd_id, last_cmd))
-
-                            if last_cmd == data:
-                                return
-
-                            print('uav.cmd', cmd_id, data)
-                            self.publish('uav.cmd', cmd_id, data)
-
-                        await asyncio.sleep(0.5)
-                    except (EOFError, ConnectionResetError, BrokenPipeError, KeyError, OSError, SerialException):
-                        await asyncio.sleep(5)
-                        break
-            except SerialException:
-                await asyncio.sleep(5)
-            finally:
+                    await asyncio.sleep(0.5)
+                except (EOFError, ConnectionResetError, BrokenPipeError, KeyError, OSError, SerialException):
+                    logger.warning('Error while reading from serial port')
+                    await asyncio.sleep(5)
+        finally:
+            logger.debug('Closing serial port')
+            if self.serial_port:
                 self.serial_port.close()
 
 
-def join_to_router(component_class):
+def join_to_router(component_class, options):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
     runner = ApplicationRunner(
         CROSSBAR_ROUTE,
-        'qgpsemu'
+        'qgpsemu',
+        extra=options
     )
 
     rerun = True
@@ -149,4 +121,4 @@ if __name__ == '__main__':
         logger.error('No comms method specified')
         exit(-1)
 
-    join_to_router(UAVAdapterComponent)
+    join_to_router(UAVAdapterComponent, {'options': args})

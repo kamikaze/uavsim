@@ -25,7 +25,7 @@ def start_sim_adapter():
         'telnet-host': '127.0.0.1',
         'telnet-port': 5901
     }
-    cmd = ['python', '{}/sim_adapter_ab.py'.format(os.path.dirname(os.path.realpath(__file__)))]
+    cmd = ['python', '{}/sim_adapter.py'.format(os.path.dirname(os.path.realpath(__file__)))]
     cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
 
     subprocess.run(cmd)
@@ -39,18 +39,6 @@ def start_uav_adapter():
     subprocess.run(cmd)
 
 
-# def start_serial_transceiver():
-#     options = {
-#         'serial': '/dev/ttyACM0',
-#         'telnet-host': '127.0.0.1',
-#         'telnet-port': 5901
-#     }
-#     cmd = ['python', '{}/serial_transceiver.py'.format(os.path.dirname(os.path.realpath(__file__)))]
-#     cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
-#
-#     subprocess.run(cmd)
-
-
 def stop_crossbar():
     subprocess.run(['crossbar', 'stop'])
 
@@ -58,7 +46,7 @@ def stop_crossbar():
 def start_crossbar():
     options = {
         'cbdir': '{}/.crossbar'.format(os.path.dirname(os.path.realpath(__file__))),
-        'loglevel': 'debug',
+        'loglevel': 'info',
         'logformat': 'syslogd',
         'logdir': '/tmp',
     }
@@ -80,6 +68,5 @@ def run_process(fn):
 
 if __name__ == '__main__':
     functions = [start_crossbar, start_fgfs, start_sim_adapter, start_uav_adapter]
-    # functions = [start_crossbar, start_fgfs, start_uav_adapter]
 
     exit_codes = [p.join() for p in list(map(run_process, functions))]
