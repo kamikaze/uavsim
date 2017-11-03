@@ -1,10 +1,12 @@
-import QtQuick 2.7
-import QtQuick.Window 2.2
-import QtLocation 5.7
-import QtPositioning 5.7
+import QtQuick 2.9
+import QtQuick.Window 2.3
+import QtLocation 5.9
+import QtPositioning 5.9
+import QtQuick.Controls 2.2
+import QtQuick.Layouts 1.3
 
 
-Window {
+ApplicationWindow {
     property var pos: QtPositioning.coordinate(56.88614457563706, 24.20416950429917)
     property var wind: {
         direction: null
@@ -59,8 +61,9 @@ Window {
                 onPressed: {
                     if (mouse.button & Qt.RightButton) {
                         pos = map.toCoordinate(Qt.point(mouse.x, mouse.y))
-                        console.log('Setting new position:', pos.latitude, pos.longitude)
                         marker.coordinate = pos
+
+                        locator.set_location(pos.latitude, pos.longitude)
                     }
                 }
             }
@@ -83,5 +86,10 @@ Window {
                 font.pixelSize: 12
             }
         }
+    }
+
+    // Here we take the result of sum or subtracting numbers
+    Connections {
+        target: locator
     }
 }
