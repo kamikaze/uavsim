@@ -55,6 +55,8 @@ ApplicationWindow {
                 marker.coordinate = pos
             }
 
+
+
             MouseArea {
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -63,7 +65,7 @@ ApplicationWindow {
                         pos = map.toCoordinate(Qt.point(mouse.x, mouse.y))
                         marker.coordinate = pos
 
-                        locator.set_location(pos.latitude, pos.longitude)
+                        locator.setLocation(pos.latitude, pos.longitude)
                     }
                 }
             }
@@ -91,5 +93,8 @@ ApplicationWindow {
     // Here we take the result of sum or subtracting numbers
     Connections {
         target: locator
+        onLocationUpdate: {
+            console.log('magic')
+        }
     }
 }
