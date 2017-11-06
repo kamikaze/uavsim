@@ -3,6 +3,26 @@ import os
 import subprocess
 from multiprocessing import Process
 
+from pkg_resources import resource_filename
+
+
+def which(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ['PATH'].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
 
 def start_fgfs():
     options = {
@@ -13,8 +33,14 @@ def start_fgfs():
         'timeofday': 'noon',
         'telnet': 'x,x,1000,localhost,5901,x',
         'geometry': '1280x720',
+        'generic': 'socket,out,10000,,5500,udp,uav_out',
+        # 'generic': 'socket,in,10000,,5501,udp,uav_in',
     }
-    cmd = ['optirun', 'fgfs', '--enable-real-weather-fetch', '--enable-horizon-effect']
+    cmd = ['fgfs', '--enable-real-weather-fetch', '--enable-horizon-effect']
+
+    if which('optirun'):
+        cmd.insert(0, 'optirun')
+
     cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
 
     subprocess.run(cmd)
@@ -23,9 +49,9 @@ def start_fgfs():
 def start_sim_adapter():
     options = {
         'telnet-host': '127.0.0.1',
-        'telnet-port': 5901
+        'telnet-port': 5901,
     }
-    cmd = ['python3', '{}/sim_adapter.py'.format(os.path.dirname(os.path.realpath(__file__)))]
+    cmd = ['python3', '-m', 'uavsim.sim_adapter']
     cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
 
     subprocess.run(cmd)
@@ -33,14 +59,22 @@ def start_sim_adapter():
 
 def start_uav_adapter():
     options = {'serial': '/dev/ttyACM0'}
-    cmd = ['python3', '{}/uav_adapter.py'.format(os.path.dirname(os.path.realpath(__file__)))]
+    cmd = ['python3', '-m', 'uavsim.uav_adapter']
+    cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
+
+    subprocess.run(cmd)
+
+
+def start_statistics_adapter():
+    options = {'output-dir': '/tmp'}
+    cmd = ['python3', '-m', 'uavsim.statistics_adapter']
     cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
 
     subprocess.run(cmd)
 
 
 def start_map():
-    cmd = ['python3', '{}/map.py'.format(os.path.dirname(os.path.realpath(__file__)))]
+    cmd = ['python3', '-m', 'uavsim.map']
     subprocess.run(cmd)
 
 
@@ -50,8 +84,8 @@ def stop_crossbar():
 
 def start_crossbar():
     options = {
-        'cbdir': '{}/.crossbar'.format(os.path.dirname(os.path.realpath(__file__))),
-        'loglevel': 'debug',
+        'cbdir': resource_filename('uavsim.resources', 'crossbar'),
+        'loglevel': 'info',
         'logformat': 'syslogd',
         'logdir': '/tmp',
     }
@@ -72,7 +106,7 @@ def run_process(fn):
 
 
 if __name__ == '__main__':
-    functions = [start_crossbar, start_fgfs, start_sim_adapter, start_uav_adapter]
+    functions = [start_crossbar, start_fgfs, start_sim_adapter, start_uav_adapter, start_statistics_adapter]
     # functions = [start_crossbar, start_fgfs, start_sim_adapter, start_uav_adapter, start_map]
 
     exit_codes = [p.join() for p in list(map(run_process, functions))]

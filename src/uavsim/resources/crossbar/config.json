@@ -4,11 +4,11 @@
     {
       "type": "router",
       "options": {
-        "title": "crossbar [qgpsemu]"
+        "title": "crossbar [uavsim]"
       },
       "realms": [
         {
-          "name": "qgpsemu",
+          "name": "uavsim",
           "roles": [
             {
               "name": "uav",
@@ -62,7 +62,7 @@
             "port": 8091
           },
           "paths": {
-            "qgpsemu": {
+            "uavsim": {
               "type": "websocket"
             }
           }

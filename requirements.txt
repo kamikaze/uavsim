@@ -3,3 +3,7 @@ autobahn
 crossbar
 PyQt5
 idna<2.6
+
+numpy
+h5py --no-binary :all:
+pyqtgraph

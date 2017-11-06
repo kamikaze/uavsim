@@ -1,5 +1,6 @@
 import QtQuick 2.9
 import QtQuick.Window 2.3
+import QtGraphicalEffects 1.0
 import QtLocation 5.9
 import QtPositioning 5.9
 import QtQuick.Controls 2.2
@@ -7,6 +8,8 @@ import QtQuick.Layouts 1.3
 
 
 ApplicationWindow {
+    id: appWin
+    property var heading: 0
     property var pos: QtPositioning.coordinate(56.88614457563706, 24.20416950429917)
     property var wind: {
         direction: null
@@ -19,7 +22,7 @@ ApplicationWindow {
 
     Plugin {
         id: osmPlugin
-        name: 'osm'
+        name: "osm"
     }
 
     Row {
@@ -33,39 +36,50 @@ ApplicationWindow {
             plugin: osmPlugin
             center: QtPositioning.coordinate(56.88614457563706, 24.20416950429917)
             activeMapType: supportedMapTypes[MapType.TerrainMap]
-            zoomLevel: 19
+            zoomLevel: 10
 
             MapQuickItem {
                 id: marker
-                sourceItem: Image{
-                    id: image
-                    source: 'arrow.png'
+                transform: Rotation { origin.x: jetIcon.width / 2; origin.y: jetIcon.height / 2; angle: appWin.heading}
 
+                sourceItem: Item {
+                    Image {
+                        id: jetIcon
+                        anchors.centerIn: parent.Center
+                        source: "images/jet.png"
+                    }
+
+                    ColorOverlay {
+                        anchors.fill: jetIcon
+                        anchors.centerIn: parent.Center
+                        source: jetIcon
+                        color: "#AAFF0000"
+                    }
                 }
-                coordinate: pos
-                anchorPoint.x: image.width / 2
-                anchorPoint.y: image.height / 2
+
+                coordinate: appWin.pos
+                anchorPoint.x: jetIcon.width / 2
+                anchorPoint.y: jetIcon.height / 2
             }
 
             onZoomLevelChanged: {
-                marker.coordinate = pos
+                marker.coordinate = appWin.pos
             }
 
             onCenterChanged: {
-                marker.coordinate = pos
+                marker.coordinate = appWin.pos
             }
 
-
-
             MouseArea {
+                property var forcePos
+
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 onPressed: {
                     if (mouse.button & Qt.RightButton) {
-                        pos = map.toCoordinate(Qt.point(mouse.x, mouse.y))
-                        marker.coordinate = pos
-
-                        locator.setLocation(pos.latitude, pos.longitude)
+                    } else if (mouse.button & Qt.LeftButton) {
+                        forcePos = map.toCoordinate(Qt.point(mouse.x, mouse.y))
+                        locator.forceLocation(forcePos.latitude.toString(), forcePos.longitude.toString())
                     }
                 }
             }
@@ -90,11 +104,22 @@ ApplicationWindow {
         }
     }
 
+    Timer {
+        id: locationUpdateTimer
+        interval: 10
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: locator.setLocation(0, 0)
+    }
+
     // Here we take the result of sum or subtracting numbers
     Connections {
         target: locator
         onLocationUpdate: {
-            console.log('magic')
+            appWin.heading = heading
+            appWin.pos = QtPositioning.coordinate(lat, lng)
+            marker.coordinate = appWin.pos
         }
     }
 }

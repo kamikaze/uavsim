@@ -39,3 +39,8 @@ CMakeLists.txt.user
 *.pyc
 __pycache__
 
+.idea
+key.priv
+key.pub
+node.pid
+*.qmlc
