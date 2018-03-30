@@ -1,0 +1,14 @@
+nose
+coverage
+pep8
+flake8
+pylint
+wheel
+setuptools
+pip
+mock
+pytest-asyncio
+pytest-mock
+pytest-cov
+pytest-pep8
+pytest-runner
