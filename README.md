@@ -5,10 +5,12 @@ Multiple components are being tied together with [CrossbarIO](https://crossbar.i
 
 ## Setting up an environment ##
 `python3.6 -m venv ~/.venv36`
+
 `source ~/.venv36/bin/activate`
 
 ## Installing dependencies ##
 `python3.6 -m pip install --upgrade -r requirements.txt`
+
 `python3.6 -m pip install --upgrade -r requirements_dev.txt`
 
 ## Building ##
