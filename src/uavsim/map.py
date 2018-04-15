@@ -90,7 +90,7 @@ class Locator(QObject):
         self.lat = None
         self.lng = None
 
-    locationUpdate = pyqtSignal(float, float, float, arguments=['lat', 'lng', 'heading'], name='locationUpdate')
+    locationUpdate = pyqtSignal(float, float, float, arguments=('lat', 'lng', 'heading',), name='locationUpdate')
 
     @pyqtSlot(str, str, name='setLocation')
     def set_location(self, lat, lng):
@@ -130,13 +130,17 @@ def run_map_ui(queue_to_ui, queue_to_sim):
     sys.exit(app.exec_())
 
 
-if __name__ == '__main__':
+def main():
     queue_to_ui = deque(maxlen=1)
     queue_to_sim = deque(maxlen=1)
 
-    thread = Thread(target=run_map_ui, args=(queue_to_ui, queue_to_sim, ))
+    thread = Thread(target=run_map_ui, args=(queue_to_ui, queue_to_sim,))
     thread.start()
 
     join_to_router(MapComponent, {'queue_to_ui': queue_to_ui, 'queue_to_sim': queue_to_sim})
 
     thread.join()
+
+
+if __name__ == '__main__':
+    main()
