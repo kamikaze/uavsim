@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 import os
 import subprocess
 from multiprocessing import Process
@@ -51,7 +51,7 @@ def start_sim_adapter():
         'telnet-host': '127.0.0.1',
         'telnet-port': 5901,
     }
-    cmd = ['python3', '-m', 'uavsim.sim_adapter']
+    cmd = ['python3.7', '-m', 'uavsim.sim_adapter']
     cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
 
     subprocess.run(cmd)
@@ -59,7 +59,7 @@ def start_sim_adapter():
 
 def start_uav_adapter():
     options = {'serial': '/dev/ttyACM0'}
-    cmd = ['python3', '-m', 'uavsim.uav_adapter']
+    cmd = ['python3.7', '-m', 'uavsim.uav_adapter']
     cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
 
     subprocess.run(cmd)
@@ -67,14 +67,14 @@ def start_uav_adapter():
 
 def start_statistics_adapter():
     options = {'output-dir': '/tmp'}
-    cmd = ['python3', '-m', 'uavsim.statistics_adapter']
+    cmd = ['python3.7', '-m', 'uavsim.statistics_adapter']
     cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
 
     subprocess.run(cmd)
 
 
 def start_map():
-    cmd = ['python3', '-m', 'uavsim.map']
+    cmd = ['python3.7', '-m', 'uavsim.map']
     subprocess.run(cmd)
 
 

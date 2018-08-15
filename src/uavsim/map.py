@@ -7,9 +7,9 @@ from decimal import Decimal
 from collections import deque
 from threading import Thread
 
-from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
-from PyQt5.QtGui import QGuiApplication
-from PyQt5.QtQml import QQmlApplicationEngine
+from PySide2.QtCore import Qt, QObject, Signal, Slot, Property
+from PySide2.QtGui import QGuiApplication
+from PySide2.QtQml import QQmlApplicationEngine
 from autobahn.asyncio.wamp import ApplicationRunner, ApplicationSession
 from autobahn.wamp import RegisterOptions
 from pkg_resources import resource_filename
@@ -90,10 +90,10 @@ class Locator(QObject):
         self.lat = None
         self.lng = None
 
-    locationUpdate = pyqtSignal(float, float, float, arguments=('lat', 'lng', 'heading',), name='locationUpdate')
+    onLocationUpdate = Signal(float, float, float, name='onLocationUpdate')
 
-    @pyqtSlot(str, str, name='setLocation')
-    def set_location(self, lat, lng):
+    @Slot(str, str)
+    def setLocation(self, lat, lng):
         self.lat = Decimal(lat)
         self.lng = Decimal(lng)
 
@@ -101,12 +101,12 @@ class Locator(QObject):
             pos = self.queue_to_ui.pop()
             # logger.info('onLocationUpdate: {}'.format(pos))
 
-            self.locationUpdate.emit(*pos)
+            self.onLocationUpdate.emit(*pos)
         except IndexError:
             pass
 
-    @pyqtSlot(str, str, name='forceLocation')
-    def force_location(self, lat, lng):
+    @Slot(str, str)
+    def forceLocation(self, lat, lng):
         # self.lat = Decimal(lat)
         # self.lng = Decimal(lng)
 
@@ -125,7 +125,9 @@ def run_map_ui(queue_to_ui, queue_to_sim):
 
     ctx.setContextProperty('locator', locator)
     ctx.setContextProperty('main', engine)
-    engine.load(resource_filename('uavsim.resources', 'main.qml'))
+
+    file_path = resource_filename('uavsim.resources', 'main.qml')
+    engine.load(file_path)
 
     sys.exit(app.exec_())
 

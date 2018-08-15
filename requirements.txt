@@ -1,7 +1,7 @@
 pyserial
 autobahn
 crossbar
-PyQt5
+pyside2
 idna<2.6
 
 numpy

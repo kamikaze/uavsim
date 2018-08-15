@@ -153,7 +153,6 @@ ApplicationWindow {
         onTriggered: locator.setLocation(0, 0)
     }
 
-    // Here we take the result of sum or subtracting numbers
     Connections {
         target: locator
         onLocationUpdate: {
