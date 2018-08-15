@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 import argparse
 import asyncio
 import logging
@@ -7,7 +7,6 @@ import sys
 
 import h5py
 import numpy as np
-from autobahn import wamp
 from autobahn.wamp.types import RegisterOptions
 from autobahn.asyncio.wamp import ApplicationSession, ApplicationRunner
 

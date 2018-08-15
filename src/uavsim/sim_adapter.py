@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 import argparse
 import asyncio
 import logging
 import sys
 from time import sleep
 
-from autobahn import wamp
 from autobahn.wamp.types import RegisterOptions
 from autobahn.asyncio.wamp import ApplicationSession, ApplicationRunner
 

@@ -6,4 +6,5 @@ idna<2.6
 
 numpy
 h5py --no-binary :all:
+qtpy
 pyqtgraph
