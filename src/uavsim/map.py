@@ -82,6 +82,7 @@ def join_to_router(component_class, options):
 
 
 class Locator(QObject):
+    # https://stackoverflow.com/questions/50609986/how-to-connect-python-and-qml-with-pyside2
     def __init__(self, queue_to_ui, queue_to_sim):
         super().__init__()
 

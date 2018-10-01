@@ -1,15 +1,15 @@
 import QtQuick 2.9
 import QtQuick.Window 2.3
 import QtGraphicalEffects 1.0
-import QtLocation 5.9
-import QtPositioning 5.9
+import QtLocation 5.11
+import QtPositioning 5.11
 import QtQuick.Controls 2.2
 import QtQuick.Layouts 1.3
 
 
 ApplicationWindow {
     id: appWin
-    property var heading: 0
+    property real heading: 0
     property var pos: QtPositioning.coordinate(56.88614457563706, 24.20416950429917)
     property var wind: {
         direction: null
