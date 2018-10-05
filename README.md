@@ -10,15 +10,15 @@ Multiple components are being tied together with [CrossbarIO](https://crossbar.i
 `source ~/.venv37/bin/activate`
 
 ## Installing dependencies ##
-`python3.7 -m pip install --upgrade -r requirements.txt`
+`python3.7 -m pip install --upgrade -r requirements.txt --no-binary :all:`
 
-`python3.7 -m pip install --upgrade -r requirements_dev.txt`
+`python3.7 -m pip install --upgrade -r requirements_dev.txt --no-binary :all:`
 
 ## Building ##
 `python3.7 setup.py build`
 
 ## Installing ##
-`python3.7 -m pip install --upgrade dist/uavsim-*.whl`
+`python3.7 -m pip install --upgrade dist/uavsim-*.whl --no-binary :all:`
 
 ## Running ##
 `

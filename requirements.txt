@@ -1,9 +1,3 @@
-pyserial
-autobahn
-crossbar
-PyQt5
-idna<2.6
+--index-url https://pypi.python.org/simple/
 
-numpy
-h5py --no-binary :all:
-pyqtgraph
+-e .
