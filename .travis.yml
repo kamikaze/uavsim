@@ -2,8 +2,8 @@ language: python
 python:
   - "3.6"
 install:
-  - "python -m pip install --upgrade -r requirements.txt  --no-binary :all:"
-  - "python -m pip install --upgrade -r requirements_dev.txt  --no-binary :all:"
+  - "python -m pip install --upgrade -r requirements.txt"
+  - "python -m pip install --upgrade -r requirements_dev.txt"
   - python setup.py develop
 script:
   - python setup.py test
