@@ -5,6 +5,7 @@ setup(
     name='uavsim',
     version='0.0.3',
     packages=find_packages(),
+    long_description=open('README.md').read(),
     requires=['python (>= 3.6)'],
     # setup_requires=['pytest-runner'],
     # tests_require=['pytest'],
