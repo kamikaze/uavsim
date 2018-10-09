@@ -13,7 +13,7 @@ FG_COMMANDS = {
     AP_CMD_ENGINE0_THROTTLE: '/controls/engines/engine[0]/throttle',
     AP_CMD_ENGINE1_THROTTLE: '/controls/engines/engine[1]/throttle'
 }
-FG_PROP_REGEXP = re.compile('([^=]*)\s+=\s*\'([^\']*)\'\s*\(([^\r]*)\)')
+FG_PROP_REGEXP = re.compile(r'([^=]*)\s+=\s*\'([^\']*)\'\s*\(([^\r]*)\)')
 
 
 class AbstractClient(object):

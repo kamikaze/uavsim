@@ -28,19 +28,6 @@ default_actions = PEP8Bear: ApplyPatchAction
 bears = LineLengthBear
 ignore_length_regex = ^.*https?://
 
-[all.CI]
-files = .ci/*
-bears = SpaceConsistencyBear
-
-[all.commit]
-bears = GitCommitBear
-shortlog_trailing_period = False
-shortlog_regex = ([^:]*|[^:]+: [A-Z0-9*].*)
-body_close_issue = True
-body_close_issue_full_url = True
-body_close_issue_on_last_line = True
-body_enforce_issue_reference = False
-
 [all.LineCounting]
 enabled = False
 bears = LineCountBear
@@ -63,21 +50,4 @@ cs_keywords =
 [all.PythonPackageInit]
 bears = PythonPackageInitBear
 ignore = *.py
-
-[all.yml]
-bears = YAMLLintBear
-files = *.yml, *.yaml, .ci/*.yml, tests/**/*.yml
-
-[bash]
-bears = ShellCheckBear
-files = .ci/*.sh
-ignore = .ci/deps.pip.sh
-shell = bash
-shellcheck_ignore = SC2046, SC2154, SC2155
-
-[jinja2]
-bears = Jinja2Bear
-files = **.jj2
-# Bug in handling of ".. list | sort"
-ignore = .moban.dt/Gemfile.jj2, .moban.dt/bear-requirements.txt.jj2, .moban.dt/package.json.jj2
 
