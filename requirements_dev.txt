@@ -1,8 +1,6 @@
 nose
 coverage
-pep8
-flake8
-pylint
+coala-bears
 wheel
 setuptools
 pip

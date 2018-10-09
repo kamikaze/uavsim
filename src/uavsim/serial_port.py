@@ -3,7 +3,9 @@ import select
 
 
 class SerialPort(object):
-    """Implements a PySerial port."""
+    """"
+    Implements a PySerial port.
+    """
 
     def __init__(self, port, baud=115200):
         self.serial_port = serial.Serial(port=port,
@@ -21,13 +23,16 @@ class SerialPort(object):
         return bool(readable)
 
     def read_byte(self):
-        """Reads a byte from the serial port."""
+        """"
+        Reads a byte from the serial port.
+        """
         if self.is_byte_available():
             data = self.serial_port.read()
             if data:
                 return data[0]
 
     def write(self, data):
-        """Write data to a serial port."""
+        """"
+        Write data to a serial port.
+        """
         self.serial_port.write(data)
-

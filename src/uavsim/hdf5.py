@@ -50,7 +50,7 @@ class HDF5Plot(pg.PlotCurveItem):
             scale = 1
         else:
             # Here convert data into a down-sampled array suitable for visualizing.
-            # Must do this piecewise to limit memory usage.        
+            # Must do this piecewise to limit memory usage.
             samples = 1 + ((stop - start) // ds)
             visible = np.zeros(samples * 2, dtype=self.hdf5.dtype)
             sourcePtr = start

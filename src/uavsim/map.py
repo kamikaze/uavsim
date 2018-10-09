@@ -36,7 +36,6 @@ class MapComponent(ApplicationSession):
             self.queue_to_ui.append((lat, lng, heading))
         except KeyError as e:
             logger.error(e)
-            pass
 
     async def on_ui_position_force(self):
         try:
