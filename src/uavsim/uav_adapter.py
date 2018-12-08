@@ -42,6 +42,7 @@ def generate_nmea_sentences(telemetry):
     gprmc = '$GPRMC,{}.000,A,{:09.4f},{},{:010.4f},{},{:.2f},267.70,{},,,A*6D'.format(
         t, lat, lat_half, lon, lon_half, speed_over_ground, d)
     exinj = '$EXINJ,{},{},{},{},NA'.format(heading, roll_x, pitch_y, yaw_z)
+    # extpid = '$EXTPID,{},{},{},NA'.format(kp, ki, kd)
 
     return [gpgga, gprmc, exinj]
 
