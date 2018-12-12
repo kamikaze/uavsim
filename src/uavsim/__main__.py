@@ -107,6 +107,7 @@ def run_process(fn):
 
 
 if __name__ == '__main__':
-    functions = (start_crossbar, start_fgfs, start_sim_adapter, start_uav_adapter, start_statistics_adapter, start_map,)
+    # functions = (start_crossbar, start_fgfs, start_sim_adapter, start_uav_adapter, start_statistics_adapter, start_map,)
+    functions = (start_crossbar, start_fgfs, start_sim_adapter, start_uav_adapter, start_statistics_adapter,)
 
     exit_codes = [p.join() for p in list(map(run_process, functions))]

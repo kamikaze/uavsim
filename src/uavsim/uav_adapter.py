@@ -42,7 +42,6 @@ def generate_nmea_sentences(telemetry):
     gprmc = '$GPRMC,{}.000,A,{:09.4f},{},{:010.4f},{},{:.2f},267.70,{},,,A*6D'.format(
         t, lat, lat_half, lon, lon_half, speed_over_ground, d)
     exinj = '$EXINJ,{},{},{},{},NA'.format(heading, roll_x, pitch_y, yaw_z)
-    # extpid = '$EXTPID,{},{},{},NA'.format(kp, ki, kd)
 
     return [gpgga, gprmc, exinj]
 
@@ -67,22 +66,29 @@ class UAVAdapterComponent(ApplicationSession):
                 logger.warning('Error while opening serial port at {}'.format(args.serial))
                 await asyncio.sleep(5)
 
+    async def send_nmea_sentence_to_uav(self, nmea_sentence):
+        logger.debug(nmea_sentence)
+
+        if self.serial_port:
+            try:
+                self.serial_port.write('{}\n'.format(nmea_sentence).encode('utf-8'))
+            except (AttributeError, SerialException):
+                await self.connect_serial_port(self.config.extra['options'].serial)
+
     async def on_sim_telemetry(self, telemetry):
         nmea_sentences = generate_nmea_sentences(telemetry)
 
         for nmea_sentence in nmea_sentences:
-            logger.debug(nmea_sentence)
+            await self.send_nmea_sentence_to_uav(nmea_sentence)
 
-            if self.serial_port:
-                try:
-                    self.serial_port.write('{}\n'.format(nmea_sentence).encode('utf-8'))
-                except (AttributeError, SerialException):
-                    await self.connect_serial_port(self.config.extra['options'].serial)
+    async def on_map_pid_force(self, kp, ki, kd):
+        await self.send_nmea_sentence_to_uav(f'$EXTPID,{kp},{ki},{kd},NA')
 
     async def onJoin(self, details):
         await self.register(self, options=RegisterOptions(invoke='roundrobin'))
 
         await self.subscribe(self.on_sim_telemetry, 'sim.telemetry')
+        await self.subscribe(self.on_map_pid_force, 'map.pid')
 
         try:
             await self.connect_serial_port(self.config.extra['options'].serial)

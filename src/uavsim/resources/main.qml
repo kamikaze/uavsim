@@ -1,23 +1,23 @@
 import QtQuick 2.9
-import QtQuick.Window 2.3
+import QtQuick.Window 2.11
 import QtGraphicalEffects 1.0
 import QtLocation 5.11
 import QtPositioning 5.11
-import QtQuick.Controls 2.2
+import QtQuick.Controls 2.4
 import QtQuick.Layouts 1.3
 
 
 ApplicationWindow {
     id: appWin
     property real heading: 0
-    property var pos: QtPositioning.coordinate(56.88614457563706, 24.20416950429917)
+    property var jetPos: QtPositioning.coordinate(0.00, 0.00)
     property var wind: {
         direction: null
         speed: 0
     }
 
-    width: 1600
-    height: 1200
+    width: 1000
+    height: 630
     visible: true
 
     Plugin {
@@ -40,6 +40,7 @@ ApplicationWindow {
 
                 MapQuickItem {
                     id: marker
+                    objectName: "marker"
                     transform: Rotation { origin.x: jetIcon.width / 2; origin.y: jetIcon.height / 2; angle: appWin.heading}
 
                     sourceItem: Item {
@@ -57,17 +58,17 @@ ApplicationWindow {
                         }
                     }
 
-                    coordinate: appWin.pos
+                    coordinate: appWin.jetPos
                     anchorPoint.x: jetIcon.width / 2
                     anchorPoint.y: jetIcon.height / 2
                 }
 
                 onZoomLevelChanged: {
-                    marker.coordinate = appWin.pos
+                    marker.coordinate = appWin.jetPos
                 }
 
                 onCenterChanged: {
-                    marker.coordinate = appWin.pos
+                    marker.coordinate = appWin.jetPos
                 }
 
                 MouseArea {
@@ -92,13 +93,13 @@ ApplicationWindow {
 //
 //                Text {
 //                    id: posLatitudeText
-//                    text: qsTr("Latitude: " + pos.latitude.toString())
+//                    text: qsTr("Latitude: " + jetPos.latitude.toString())
 //                    font.pixelSize: 12
 //                }
 //
 //                Text {
 //                    id: posLongitudeText
-//                    text: qsTr("Longitude: " + pos.longitude.toString())
+//                    text: qsTr("Longitude: " + jetPos.longitude.toString())
 //                    font.pixelSize: 12
 //                }
 //            }
@@ -122,24 +123,64 @@ ApplicationWindow {
             }
             SpinBox {
                 id: pid_kp
-//                decimals: 5
+                editable: true
+                from: 0
+                to: 100000
+
+                property int decimals: 5
+                property real realValue: value / 100000
+
+                textFromValue: function(value, locale) {
+                    return Number(value / 100000).toLocaleString(locale, "f", pid_kp.decimals)
+                }
+
+                valueFromText: function(text, locale) {
+                    return Number.fromLocaleString(locale, text) * 100000
+                }
             }
             Label {
                 text: "kI"
             }
             SpinBox {
                 id: pid_ki
-//                decimals: 5
+                editable: true
+                from: 0
+                to: 100000
+
+                property int decimals: 5
+                property real realValue: value / 100000
+
+                textFromValue: function(value, locale) {
+                    return Number(value / 100000).toLocaleString(locale, "f", pid_kp.decimals)
+                }
+
+                valueFromText: function(text, locale) {
+                    return Number.fromLocaleString(locale, text) * 100000
+                }
             }
             Label {
                 text: "kD"
             }
             SpinBox {
                 id: pid_kd
-//                decimals: 5
+                editable: true
+                from: 0
+                to: 100000
+
+                property int decimals: 5
+                property real realValue: value / 100000
+
+                textFromValue: function(value, locale) {
+                    return Number(value / 100000).toLocaleString(locale, "f", pid_kp.decimals)
+                }
+
+                valueFromText: function(text, locale) {
+                    return Number.fromLocaleString(locale, text) * 100000
+                }
             }
             Button {
                 text: "Send"
+                onClicked: pidManager.forcePID(pid_kp.realValue, pid_ki.realValue, pid_kd.realValue)
             }
         }
     }
@@ -153,13 +194,12 @@ ApplicationWindow {
         onTriggered: locator.setLocation(0, 0)
     }
 
-    // Here we take the result of sum or subtracting numbers
     Connections {
         target: locator
         onLocationUpdate: {
             appWin.heading = heading
-            appWin.pos = QtPositioning.coordinate(lat, lng)
-            marker.coordinate = appWin.pos
+            appWin.jetPos = QtPositioning.coordinate(lat, lng)
+            marker.coordinate = appWin.jetPos
         }
     }
 }
