@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 from multiprocessing import Process
+from pathlib import Path
 
 from pkg_resources import resource_filename
 
@@ -59,9 +60,7 @@ def start_sim_adapter():
 
 
 def start_uav_adapter():
-    options = {'serial': '/dev/ttyACM0'}
     cmd = [sys.executable, '-m', 'uavsim.uav_adapter']
-    cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
 
     subprocess.run(cmd)
 
@@ -80,7 +79,10 @@ def start_map():
 
 
 def stop_crossbar():
-    subprocess.run(['crossbar', 'stop'])
+    basedir = Path(sys.executable).parent
+    cmd = [f'{basedir}/crossbar', 'stop']
+
+    subprocess.run(cmd)
 
 
 def start_crossbar():
@@ -90,7 +92,9 @@ def start_crossbar():
         'logformat': 'syslogd',
         'logdir': '/tmp',
     }
-    cmd = ['crossbar', 'start']
+    basedir = Path(sys.executable).parent
+
+    cmd = [f'{basedir}/crossbar', 'start']
 
     for k, v in options.items():
         cmd.append('--{}'.format(k))
@@ -107,7 +111,6 @@ def run_process(fn):
 
 
 if __name__ == '__main__':
-    # functions = (start_crossbar, start_fgfs, start_sim_adapter, start_uav_adapter, start_statistics_adapter, start_map,)
-    functions = (start_crossbar, start_fgfs, start_sim_adapter, start_uav_adapter, start_statistics_adapter,)
+    functions = (start_crossbar, start_fgfs, start_sim_adapter, start_statistics_adapter,)
 
     exit_codes = [p.join() for p in list(map(run_process, functions))]

@@ -1,12 +1,15 @@
 import argparse
 import asyncio
 import logging
+import os
 import sys
 from time import gmtime, strftime, sleep
 
+import pyudev
 from autobahn.wamp.types import RegisterOptions
 from autobahn.asyncio.wamp import ApplicationSession, ApplicationRunner
 from decimal import Decimal
+
 from serial import Serial
 from serial.serialutil import SerialException
 
@@ -51,20 +54,47 @@ class UAVAdapterComponent(ApplicationSession):
         ApplicationSession.__init__(self, config)
         self.serial_port = None
 
-    async def connect_serial_port(self, path):
+    @staticmethod
+    def _detect_device_path():
+        context = pyudev.Context()
+        devices = context.list_devices(subsystem='usb', driver='cdc_acm', PRODUCT='f055/9800/200')
+
+        for device in devices:
+            if device.properties.get('INTERFACE') == '2/2/1':
+                break
+        else:
+            device = None
+
+        if device is None:
+            logger.info('No device found, waiting for it')
+            monitor = pyudev.Monitor.from_netlink(context)
+            monitor.filter_by(subsystem='usb')
+
+            for device in iter(monitor.poll, None):
+                if device.action == 'add':
+                    if device.properties['PRODUCT'] == 'f055/9800/200' and device.properties.get('INTERFACE') == '2/2/1':
+                        break
+
+        device_filename = os.listdir(f'{device.sys_path}/tty/')[0]
+
+        return f'/dev/{device_filename}'
+
+    async def connect_serial_port(self, path=None):
         if self.serial_port:
             self.serial_port.close()
             self.serial_port = None
 
-        while True:
-            try:
-                self.serial_port = Serial(path)
-                logger.info('Connected to serial port {}'.format(args.serial))
+        if not path:
+            logger.info('Looking for a device')
+            path = self._detect_device_path()
 
-                break
-            except SerialException:
-                logger.warning('Error while opening serial port at {}'.format(args.serial))
-                await asyncio.sleep(5)
+        try:
+            await asyncio.sleep(1)
+            self.serial_port = Serial(path)
+            logger.info('Connected to serial port {}'.format(path))
+        except SerialException:
+            logger.warning('Error while opening serial port at {}'.format(path))
+            await asyncio.sleep(5)
 
     async def send_nmea_sentence_to_uav(self, nmea_sentence):
         logger.debug(nmea_sentence)
@@ -102,8 +132,8 @@ class UAVAdapterComponent(ApplicationSession):
 
                     await asyncio.sleep(0.5)
                 except (EOFError, ConnectionResetError, BrokenPipeError, KeyError, OSError, SerialException):
-                    logger.warning('Error while reading from serial port')
-                    await asyncio.sleep(5)
+                    logger.error('Connection with serial port failed, reconnecting...')
+                    await self.connect_serial_port(self.config.extra['options'].serial)
         finally:
             logger.debug('Closing serial port')
             if self.serial_port:
@@ -153,10 +183,6 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args(sys.argv[1:])
-
-    if not args.serial:
-        logger.error('No comms method specified')
-        exit(-1)
 
     sleep(5)
 

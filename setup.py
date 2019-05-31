@@ -28,7 +28,7 @@ setup(
         'crossbar',
         'PyQt5',
         'idna<2.6',
-
+        'pyudev',
         'numpy',
         'h5py',
         'pyqtgraph',
