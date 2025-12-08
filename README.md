@@ -1,26 +1,22 @@
 # UAVSim
-UAV simulator that sends NMEA sentences to external devices (i.e. real uav)
-It is written in [Python](https://www.python.org/) language and uses [Autobahn](https://autobahn.readthedocs.io/en/latest/) with [AsyncIO](https://docs.python.org/3/library/asyncio.html).
-GUI applications are using [PyQt5](https://www.riverbankcomputing.com/software/pyqt/intro) / [PySide2](http://wiki.qt.io/Qt_for_Python).
-Multiple components are being tied together with [CrossbarIO](https://crossbar.io/).
+UAV simulator that sends NMEA sentences to external devices (i.e. a real UAV).
 
-## Setting up an environment ##
-`python3.7 -m venv ~/.venv37`
+The application is a single-process asyncio program with a lightweight in-memory pub/sub bus. The UI is built with PyQt5 and integrated with asyncio via qasync. Components (sim, UAV, stats) run as asyncio tasks and communicate over topics like `sim.telemetry`, `uav.cmd`, `map.position`, and `map.pid`.
 
-`source ~/.venv37/bin/activate`
+## Prerequisites
+- Python 3.14.x
+- Optional: FlightGear (fgfs) running with telnet on 127.0.0.1:5901
 
-## Installing dependencies ##
-`python3.7 -m pip install --upgrade -r requirements.txt`
+## Setup with uv (recommended)
+1. Install uv: https://docs.astral.sh/uv/
+2. Sync dependencies:
+   - `uv sync`
+3. Run the app:
+   - `uv run -m uavsim`
 
-`python3.7 -m pip install --upgrade -r requirements_dev.txt`
+## Development
+- Source code is under `src/`.
+- Tests (if any) are under `tests/` and can be run with `uv run pytest`.
 
-## Building ##
-`python3.7 setup.py build`
-
-## Installing ##
-`python3.7 -m pip install --upgrade dist/uavsim-*.whl`
-
-## Running ##
-`
-python3.7 -m uavsim
-`
+## Notes
+- Crossbar/Autobahn have been removed. Older modules (`uavsim.*_adapter`, `uavsim.launcher`) are deprecated stubs kept only for historical reference.

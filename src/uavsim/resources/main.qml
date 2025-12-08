@@ -31,7 +31,9 @@ ApplicationWindow {
         ColumnLayout {
             Map {
                 id: map
-                anchors.fill: parent
+                // In a Layout-managed item, avoid anchors; use Layout props instead
+                Layout.fillWidth: true
+                Layout.fillHeight: true
                 copyrightsVisible: false
                 plugin: osmPlugin
                 center: QtPositioning.coordinate(56.88614457563706, 24.20416950429917)
@@ -196,7 +198,7 @@ ApplicationWindow {
 
     Connections {
         target: locator
-        onLocationUpdate: {
+        function onLocationUpdate(lat, lng, heading) {
             appWin.heading = heading
             appWin.jetPos = QtPositioning.coordinate(lat, lng)
             marker.coordinate = appWin.jetPos

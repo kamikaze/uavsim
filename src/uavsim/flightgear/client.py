@@ -1,7 +1,8 @@
 import logging
 import re
 import socket
-import telnetlib
+
+import telnetlib3
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ FG_COMMANDS = {
 FG_PROP_REGEXP = re.compile(r'([^=]*)\s+=\s*\'([^\']*)\'\s*\(([^\r]*)\)')
 
 
-class AbstractClient(object):
+class AbstractClient:
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -42,10 +43,10 @@ class AbstractClient(object):
 class TelnetClient(AbstractClient):
     def connect(self):
         if not self.conn:
-            self.conn = telnetlib.Telnet(host=self.host, port=self.port)
+            self.conn = telnetlib3.Telnet(host=self.host, port=self.port)
 
     def set_property(self, name, value):
-        cmd = 'set {} {}\r\n'.format(name, value)
+        cmd = f'set {name} {value}\r\n'
         logger.info(cmd)
 
         self.conn.write(cmd.encode('ascii'))
@@ -56,7 +57,7 @@ class TelnetClient(AbstractClient):
         cmd_id = int(cmd_id)
 
         last_cmd = self.last_cmds.get(cmd_id)
-        logger.info('{} {}'.format(cmd_id, last_cmd))
+        logger.info(f'{cmd_id} {last_cmd}')
 
         if last_cmd == data:
             return
@@ -69,7 +70,7 @@ class TelnetClient(AbstractClient):
         self.set_property('position/longitude-deg', lon)
 
     def read_fg_data(self, path):
-        self.conn.write('ls {}\r\n'.format(path).encode('ascii'))
+        self.conn.write(f'ls {path}\r\n'.encode('ascii'))
         received_data = self.conn.read_until(b'/> ').decode('ascii')
         telemetry = {}
 

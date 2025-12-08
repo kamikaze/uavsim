@@ -1,8 +1,10 @@
-import serial
 import select
+from collections.abc import Buffer
+
+import serial
 
 
-class SerialPort(object):
+class SerialPort:
     """"
     Implements a PySerial port.
     """
@@ -18,11 +20,12 @@ class SerialPort(object):
                                          rtscts=False,
                                          dsrdtr=False)
 
-    def is_byte_available(self):
+    def is_byte_available(self) -> bool:
         readable, _, _ = select.select([self.serial_port.fileno()], [], [], 0)
+
         return bool(readable)
 
-    def read_byte(self):
+    def read_byte(self) -> int | None:
         """"
         Reads a byte from the serial port.
         """
@@ -31,7 +34,9 @@ class SerialPort(object):
             if data:
                 return data[0]
 
-    def write(self, data):
+        return None
+
+    def write(self, data: Buffer) -> None:
         """"
         Write data to a serial port.
         """

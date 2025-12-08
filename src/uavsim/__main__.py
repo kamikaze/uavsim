@@ -1,116 +1,14 @@
-#!/usr/bin/env python3
-import os
-import subprocess
-import sys
-from multiprocessing import Process
-from pathlib import Path
-
-from pkg_resources import resource_filename
-
-
-def which(program):
-    def is_exe(fpath):
-        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, fname = os.path.split(program)
-
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        for path in os.environ['PATH'].split(os.pathsep):
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-
-    return None
-
-
-def start_fgfs():
-    options = {
-        'fg-aircraft': '{}/.fgfs/Aircraft'.format(os.path.expanduser('~')),
-        'aircraft': 'SU-37',
-        'airport': 'EVRA',
-        'callsign': 'kamikaze',
-        'timeofday': 'noon',
-        'telnet': 'x,x,1000,localhost,5901,x',
-        'geometry': '1280x720',
-        'generic': 'socket,out,10000,,5500,udp,uav_out',
-        # 'generic': 'socket,in,10000,,5501,udp,uav_in',
-    }
-    cmd = ['fgfs', '--enable-real-weather-fetch', '--enable-horizon-effect']
-
-    if which('optirun'):
-        cmd.insert(0, 'optirun')
-
-    cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
-
-    subprocess.run(cmd)
-
-
-def start_sim_adapter():
-    options = {
-        'telnet-host': '127.0.0.1',
-        'telnet-port': 5901,
-    }
-    cmd = [sys.executable, '-m', 'uavsim.sim_adapter']
-    cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
-
-    subprocess.run(cmd)
-
-
-def start_uav_adapter():
-    cmd = [sys.executable, '-m', 'uavsim.uav_adapter']
-
-    subprocess.run(cmd)
-
-
-def start_statistics_adapter():
-    options = {'output-dir': '/tmp'}
-    cmd = [sys.executable, '-m', 'uavsim.statistics_adapter']
-    cmd.extend('--{}={}'.format(k, v) for k, v in options.items())
-
-    subprocess.run(cmd)
-
-
-def start_map():
-    cmd = [sys.executable, '-m', 'uavsim.map']
-    subprocess.run(cmd)
-
-
-def stop_crossbar():
-    basedir = Path(sys.executable).parent
-    cmd = [f'{basedir}/crossbar', 'stop']
-
-    subprocess.run(cmd)
-
-
-def start_crossbar():
-    options = {
-        'cbdir': resource_filename('uavsim.resources', 'crossbar'),
-        'loglevel': 'info',
-        'logformat': 'syslogd',
-        'logdir': '/tmp',
-    }
-    basedir = Path(sys.executable).parent
-
-    cmd = [f'{basedir}/crossbar', 'start']
-
-    for k, v in options.items():
-        cmd.append('--{}'.format(k))
-        cmd.append(v)
-
-    subprocess.run(cmd)
-
-
-def run_process(fn):
-    p = Process(target=fn)
-    p.start()
-
-    return p
+from uavsim.map import run_map
+from uavsim.sim_task import run_sim
+from uavsim.uav_task import run_uav
+from uavsim.stats_task import run_stats
 
 
 if __name__ == '__main__':
-    functions = (start_crossbar, start_fgfs, start_sim_adapter, start_statistics_adapter,)
-
-    exit_codes = [p.join() for p in list(map(run_process, functions))]
+    # Run a single-process app: Qt UI + asyncio tasks for sim/uav/stats.
+    # FlightGear (fgfs) is optional; if not running, the sim task will retry.
+    run_map(extra_tasks=[
+        lambda: run_sim(telnet_host='127.0.0.1', telnet_port=5901),
+        lambda: run_uav(serial_path=None),  # set serial_path to use real serial
+        lambda: run_stats(output_dir='/tmp'),
+    ])

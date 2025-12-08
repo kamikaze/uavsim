@@ -1,0 +1,159 @@
+[build-system]
+requires = ["setuptools", "wheel", "setuptools_scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uavsim"
+dynamic = ["version"]
+description = "UAV Simulator"
+readme = "README.md"
+requires-python = ">=3.14.2,<3.15"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Oleg Korsak", email = "kamikaze.is.waiting.you@gmail.com" }
+]
+keywords = ["uav", "simulator"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: Other/Proprietary License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+dependencies = [
+    "PyQt5",
+    "qasync",
+    "h5py",
+    "numpy",
+    "pyserial",
+    "telnetlib3",
+]
+
+[project.urls]
+Homepage = "https://github.com/kamikaze/uavsim"
+
+[dependency-groups]
+dev = [
+    "build",
+    "pip",
+    "pre-commit",
+    "pyright",
+    "ruff",
+    "setuptools",
+    "setuptools_scm",
+    "wheel",
+]
+testing = [
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-mock",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+exclude = ["tests"]
+
+[tool.setuptools.package-data]
+uavsim = [
+  "resources/main.qml",
+  "resources/images/**",
+]
+
+[tool.setuptools_scm]
+
+[tool.bdist_wheel]
+universal = true
+
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py314"
+
+[tool.ruff.analyze]
+detect-string-imports = true
+
+[tool.ruff.lint]
+select = [
+    "FAST",
+    "YTT",
+    #    "ANN",
+    "I",
+    "E",
+    "W",
+    "PYI",
+    "A",
+    #    "ARG",
+    "ASYNC",
+    "B",
+    "C4",
+    #    "DTZ",
+    "EM",
+    "EXE",
+    "F",
+    "FA",
+    "FBT",
+    "FLY",
+    "FURB",
+    #    "G",
+    "ICN",
+    "INP",
+    "ISC",
+    "LOG",
+    "N",
+    "NPY",
+    "PD",
+    "PERF",
+    "PIE",
+    "PLC",
+    "PLE",
+    #    "PLR",
+    "PLW",
+    "PT",
+    "PTH",
+    "Q",
+    "RET",
+    "RSE",
+    "RUF",
+    "S",
+    "SIM",
+    "SLF",
+    "SLOT",
+    "T20",
+    "TC",
+    "TID",
+    "TRY",
+    "UP",
+]
+ignore = [
+    "ASYNC109",
+    "TC003", # msgspec
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["DTZ", "S101"]
+
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "single"
+
+[tool.ruff.format]
+exclude = ["*.pyi"]
+indent-style = "space"
+quote-style = "single"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+reportMatchNotExhaustive = "error"
+reportUnnecessaryComparison = "error"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "--cov uavsim --cov-fail-under=15 --cov-report term-missing --verbose"
+norecursedirs = ["dist", "build", ".tox"]
+testpaths = ["tests"]

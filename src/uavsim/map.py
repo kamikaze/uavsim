@@ -2,97 +2,24 @@
 import asyncio
 import logging
 import sys
-
 from decimal import Decimal
-from collections import deque
-from threading import Thread
 
-from PyQt5.QtCore import pyqtSlot, QObject, pyqtSignal
+from importlib.resources import files
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QGuiApplication
 from PyQt5.QtQml import QQmlApplicationEngine
-from autobahn.asyncio.wamp import ApplicationRunner, ApplicationSession
-from autobahn.wamp import RegisterOptions
-from pkg_resources import resource_filename
+from qasync import QEventLoop
+
+from uavsim.bus import bus
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-CROSSBAR_ROUTE = 'ws://127.0.0.1:8091/uavsim'
-
-
-class MapComponent(ApplicationSession):
-    def __init__(self, config=None):
-        ApplicationSession.__init__(self, config)
-        self.queue_to_ui = config.extra['queue_to_ui']
-        self.queue_out = config.extra['queue_out']
-        self.is_running = False
-
-    async def on_sim_telemetry(self, telemetry):
-        try:
-            lat = telemetry['latitude-deg']
-            lng = telemetry['longitude-deg']
-            heading = telemetry['heading-deg']
-
-            self.queue_to_ui.append((lat, lng, heading))
-        except KeyError as e:
-            logger.error(e)
-
-    async def pass_outgoing_cmd(self):
-        try:
-            while True:
-                cmd, arguments = self.queue_out.pop()
-
-                if cmd == 'pos':
-                    self.publish('map.position', *arguments)
-                elif cmd == 'pid':
-                    self.publish('map.pid', *arguments)
-                else:
-                    logger.warning(f'Unknown command: {cmd}, ignoring')
-        except IndexError:
-            pass
-
-    async def onJoin(self, details):
-        await self.register(self, options=RegisterOptions(invoke='roundrobin'))
-
-        await self.subscribe(self.on_sim_telemetry, 'sim.telemetry')
-
-        self.is_running = True
-
-        while self.is_running:
-            await self.pass_outgoing_cmd()
-            await asyncio.sleep(0.1)
-
-
-def join_to_router(component_class, options):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    runner = ApplicationRunner(
-        CROSSBAR_ROUTE,
-        'uavsim',
-        extra=options
-    )
-
-    rerun = True
-
-    while rerun:
-        rerun = False
-
-        try:
-            runner.run(component_class)
-        # except gaierror:
-        except OSError:
-            # TODO: log about [Errno -3] Temporary failure in name resolution
-            rerun = True
-
 
 class Locator(QObject):
-    # https://stackoverflow.com/questions/50609986/how-to-connect-python-and-qml-with-pyside2
-    def __init__(self, queue_to_ui, queue_out):
+    # Exposed to QML to receive map clicks and emit location updates
+    def __init__(self):
         super().__init__()
-
-        self.queue_to_ui = queue_to_ui
-        self.queue_out = queue_out
         self.lat = None
         self.lng = None
 
@@ -100,34 +27,27 @@ class Locator(QObject):
 
     @pyqtSlot(str, str, name='setLocation')
     def set_location(self, lat, lng):
+        # Called periodically by QML; we don't pull from a queue anymore
+        # Values are updated via telemetry subscriber task that emits locationUpdate
         self.lat = Decimal(lat)
         self.lng = Decimal(lng)
 
-        try:
-            pos = self.queue_to_ui.pop()
-            # logger.info('onLocationUpdate: {}'.format(pos))
-
-            self.locationUpdate.emit(*pos)
-        except IndexError:
-            pass
-
     @pyqtSlot(str, str, name='forceLocation')
     def force_location(self, lat, lng):
-        # self.lat = Decimal(lat)
-        # self.lng = Decimal(lng)
-
+        # Publish a forced position to the bus
         try:
-            self.queue_out.append(('loc', (lat, lng,)))
-        except IndexError:
-            pass
+            lat_f = float(lat)
+            lng_f = float(lng)
+        except Exception:
+            logger.warning('Invalid lat/lng: %s, %s', lat, lng)
+            return
+
+        asyncio.create_task(bus.publish('map.position', (lat_f, lng_f)))
 
 
 class PIDManager(QObject):
-    def __init__(self, queue_to_ui, queue_out):
+    def __init__(self):
         super().__init__()
-
-        self.queue_to_ui = queue_to_ui
-        self.queue_out = queue_out
         self.kp = None
         self.ki = None
         self.kd = None
@@ -136,52 +56,62 @@ class PIDManager(QObject):
 
     @pyqtSlot(str, str, name='setPID')
     def set_pid(self, kp, ki, kd):
-        self.kp = Decimal(kp)
-        self.ki = Decimal(ki)
-        self.kd = Decimal(kd)
-
+        # Values are updated via telemetry or retained; currently just cache
         try:
-            pid = self.queue_to_ui.pop()
-
-            self.pidUpdate.emit(*pid)
-        except IndexError:
-            pass
+            self.kp = float(kp)
+            self.ki = float(ki)
+            self.kd = float(kd)
+        except Exception:
+            logger.warning('Invalid PID values: %s, %s, %s', kp, ki, kd)
 
     @pyqtSlot(float, float, float, name='forcePID')
     def force_pid(self, kp, ki, kd):
+        asyncio.create_task(bus.publish('map.pid', (kp, ki, kd)))
+
+
+async def _telemetry_to_ui(locator: Locator):
+    q = bus.subscribe('sim.telemetry')
+    while True:
+        telemetry = await q.get()
         try:
-            self.queue_out.append(('pid', (kp, ki, kd,)))
-        except IndexError:
-            pass
+            lat = float(telemetry['latitude-deg'])
+            lng = float(telemetry['longitude-deg'])
+            heading = float(telemetry['heading-deg'])
+        except Exception as e:
+            logger.debug('Bad telemetry: %s', e)
+            continue
+        # Emit into QML (we are inside the Qt/async loop via qasync)
+        locator.locationUpdate.emit(lat, lng, heading)
 
 
-def run_map_ui(queue_to_ui, queue_out):
+def run_map(extra_tasks=None):
     app = QGuiApplication(sys.argv)
+    loop = QEventLoop(app)
+    asyncio.set_event_loop(loop)
+
     engine = QQmlApplicationEngine()
     ctx = engine.rootContext()
 
-    locator = Locator(queue_to_ui, queue_out)
-    pid_manager = PIDManager(queue_to_ui, queue_out)
+    locator = Locator()
+    pid_manager = PIDManager()
 
     ctx.setContextProperty('locator', locator)
     ctx.setContextProperty('pidManager', pid_manager)
     ctx.setContextProperty('main', engine)
-    engine.load(resource_filename('uavsim.resources', 'main.qml'))
 
-    sys.exit(app.exec_())
+    qml_path = files('uavsim.resources') / 'main.qml'
+    engine.load(str(qml_path))
 
+    # Start telemetry bridge task before the loop runs; schedule on the loop explicitly
+    loop.create_task(_telemetry_to_ui(locator))
+    # Schedule extra tasks (other components)
+    if extra_tasks:
+        for t in extra_tasks:
+            try:
+                c = t() if callable(t) else t
+                loop.create_task(c)
+            except Exception as e:
+                logger.error('Failed to schedule task: %s', e)
 
-def main():
-    queue_to_ui = deque(maxlen=1)
-    queue_out = deque(maxlen=1)
-
-    thread = Thread(target=run_map_ui, args=(queue_to_ui, queue_out,))
-    thread.start()
-
-    join_to_router(MapComponent, {'queue_to_ui': queue_to_ui, 'queue_out': queue_out})
-
-    thread.join()
-
-
-if __name__ == '__main__':
-    main()
+    with loop:
+        loop.run_forever()

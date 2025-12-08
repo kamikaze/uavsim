@@ -1,8 +1,8 @@
 import faulthandler
 import sys
 
-import numpy as np
 import h5py
+import numpy as np
 import pyqtgraph as pg
 from qtpy import QtGui
 
@@ -53,35 +53,35 @@ class HDF5Plot(pg.PlotCurveItem):
             # Must do this piecewise to limit memory usage.
             samples = 1 + ((stop - start) // ds)
             visible = np.zeros(samples * 2, dtype=self.hdf5.dtype)
-            sourcePtr = start
-            targetPtr = 0
+            source_ptr = start
+            target_ptr = 0
 
             # read data in chunks of ~1M samples
-            chunkSize = (1000000 // ds) * ds
+            chunk_size = (1000000 // ds) * ds
 
-            while sourcePtr < stop - 1:
-                chunk = self.hdf5[sourcePtr:min(stop, sourcePtr + chunkSize)]
-                sourcePtr += len(chunk)
+            while source_ptr < stop - 1:
+                chunk = self.hdf5[source_ptr:min(stop, source_ptr + chunk_size)]
+                source_ptr += len(chunk)
 
                 # reshape chunk to be integral multiple of ds
                 chunk = chunk[:(len(chunk) // ds) * ds].reshape(len(chunk) // ds, ds)
 
                 # compute max and min
-                chunkMax = chunk.max(axis=1)
-                chunkMin = chunk.min(axis=1)
+                chunk_max = chunk.max(axis=1)
+                chunk_min = chunk.min(axis=1)
 
                 # interleave min and max into plot data to preserve envelope shape
-                visible[targetPtr:targetPtr + chunk.shape[0] * 2:2] = chunkMin
-                visible[1 + targetPtr:1 + targetPtr + chunk.shape[0] * 2:2] = chunkMax
-                targetPtr += chunk.shape[0] * 2
+                visible[target_ptr:target_ptr + chunk.shape[0] * 2:2] = chunk_min
+                visible[1 + target_ptr:1 + target_ptr + chunk.shape[0] * 2:2] = chunk_max
+                target_ptr += chunk.shape[0] * 2
 
-            visible = visible[:targetPtr]
+            visible = visible[:target_ptr]
             scale = ds * 0.5
 
         self.setData(visible)  # update the plot
         self.setPos(start, 0)  # shift to match starting index
         self.resetTransform()
-        self.scale(scale, 1)  # scale to match downsampling
+        self.setScale(scale)  # scale to match downsampling
 
 
 f = None

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
+import datetime
 import logging
 import sys
-
-import datetime
+from datetime import UTC
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -25,13 +25,13 @@ def send_fg_command(telnet_client, line):
     cmd_id = int(cmd_id)
 
     last_cmd = LAST_FG_COMMANDS.get(cmd_id)
-    logger.info('{} {}'.format(cmd_id, last_cmd))
+    logger.info(f'{cmd_id} {last_cmd}')
 
     if last_cmd == data:
         return
 
     cmd = FG_COMMANDS[cmd_id]
-    cmd = 'set {}\r\n'.format(cmd.format(*data))
+    cmd = f'set {cmd.format(*data)}\r\n'
     logger.info(cmd)
 
     telnet_client.write(cmd.encode('ascii'))
@@ -41,13 +41,13 @@ def send_fg_command(telnet_client, line):
 
 def write_nmea(serial_port, line, verbose):
     if verbose:
-        logger.info('Writing NMEA sentence: {}'.format(line))
+        logger.info(f'Writing NMEA sentence: {line}')
 
-    serial_port.write('{}\n'.format(line).encode('utf-8'))
+    serial_port.write(f'{line}\n'.encode())
 
 
 def read_fg_telemetry(telnet_client):
-    telemetry = {'dt': datetime.datetime.utcnow().timestamp()}
+    telemetry = {'dt': datetime.datetime.now(tz=UTC).timestamp()}
     telemetry.update(telnet_client.read_fg_data('position'))
     telemetry.update(telnet_client.read_fg_data('orientation/model'))
     telemetry.update(telnet_client.read_fg_data('velocities'))
