@@ -6,6 +6,7 @@
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
+      <env name="QT_QPA_PLATFORM" value="wayland" />
     </envs>
     <option name="SDK_HOME" value="" />
     <option name="SDK_NAME" value="uv (uavsim)" />
